@@ -11,6 +11,8 @@ import asyncio
 import html
 import logging
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 try:  # lokal ishga tushirishda .env faylni avtomatik o'qiydi
     from dotenv import load_dotenv
@@ -713,6 +715,48 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 
+class _HealthHandler(BaseHTTPRequestHandler):
+    """Render Web Service kutadigan oddiy javob: har qanday GET/HEAD ga 200 OK."""
+
+    def _reply(self, with_body: bool):
+        payload = b"OK"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        if with_body:
+            self.wfile.write(payload)
+
+    def do_GET(self):
+        self._reply(True)
+
+    def do_HEAD(self):
+        self._reply(False)
+
+    def log_message(self, *args):  # logni to'ldirmaslik uchun
+        pass
+
+
+def start_health_server():
+    """PORT o'zgaruvchisi bo'lsa (Render Web Service), kichik HTTP server ishga tushiradi.
+
+    Render Web Service ochiq port bo'lmasa deployni muvaffaqiyatsiz deb hisoblaydi.
+    Lokal ishga tushirishda va Background Worker'da PORT bo'lmasa, hech narsa qilmaydi.
+    """
+    raw_port = os.environ.get("PORT", "").strip()
+    if not raw_port:
+        return None
+    try:
+        port = int(raw_port)
+        server = HTTPServer(("0.0.0.0", port), _HealthHandler)
+    except (ValueError, OSError) as exc:
+        logger.warning("Health server ishga tushmadi (PORT=%r): %s", raw_port, exc)
+        return None
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logger.info("Health server %s-portda ishga tushdi", port)
+    return server
+
+
 def build_application() -> Application:
     app = Application.builder().token(BOT_TOKEN).build()
 
@@ -735,6 +779,7 @@ def main():
     if not ADMIN_IDS:
         logger.warning("ADMIN_IDS bo'sh — admin panel hech kimga ochiq bo'lmaydi.")
 
+    start_health_server()  # faqat PORT bo'lsa (Render Web Service)
     app = build_application()
     logger.info("Bot ishga tushdi (polling rejimida)...")
     app.run_polling(

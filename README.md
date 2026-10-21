@@ -46,11 +46,17 @@ Telegram ID'ingizni bilmasangiz — botga `/id` yuboring. Bir nechta admin:
 
 ## 3. Render'ga joylashtirish
 1. Kodni GitHub'ga yuklang (`.env` yuklanmaydi — `.gitignore` himoya qiladi).
-2. Render'da yangi **Background Worker** yarating (pullik reja kerak bo'lishi mumkin) va repo'ni bog'lang.
+2. Render'da yangi **Background Worker** (tavsiya) yoki **Web Service** yarating va repo'ni bog'lang.
 3. Build Command: `pip install -r requirements.txt`
-4. Start Command: `python bot.py`
+4. Start Command: `python bot.py` (Web Service'da standart `gunicorn ...` ni shunga almashtiring!)
 5. Environment: `BOT_TOKEN`, `ADMIN_IDS`, `PYTHON_VERSION=3.12.7`
 6. Deploy.
+
+**Web Service haqida:** Render portda javob kutadi, shuning uchun bot `PORT`
+mavjud bo'lsa kichik "OK" serverini o'zi ishga tushiradi. Bepul (Free) Web Service
+15 daqiqa so'rovsiz qolsa uxlaydi va bot javob bermay qoladi — bunda
+UptimeRobot kabi xizmat bilan har 5 daqiqada servis manziliga so'rov yuborib
+turish kerak. Pullik reja (Starter) uxlamaydi.
 
 (`Procfile` Render'da ishlatilmaydi — u Heroku uchun. Python versiyasi
 `.python-version` yoki `PYTHON_VERSION` orqali beriladi.)
